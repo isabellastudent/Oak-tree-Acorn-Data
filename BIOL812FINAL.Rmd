@@ -1,0 +1,106 @@
+---
+title: "BIOL 812 Final Project"
+output:
+  word_document: default
+  html_document: default
+date: "2025-04-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+```{r}
+library(ggplot2) # plotting library
+library(dplyr) # data management
+library(lme4) # linear mixed-effects models using Eigen and S4
+library(lmtest) # Lagrange multiplier test
+library(stringr) 
+library(tidyr)
+library(RColorBrewer) # colour graphics
+library(sjPlot) # data visualization
+source("http://bit.ly/theme_pub") # set custom plotting theme
+theme_set(theme_pub())
+```
+
+# Download Data
+```{r}
+GarDat = read.csv("CommonGarden_Data_With_ENV (2).csv")
+```
+
+# Set random effect (Block) as factor
+```{r}
+GarDat <- GarDat %>% 
+  mutate(Block=as.factor(Block))
+```
+
+# Linear mixed effects models with fixed environmental effects (Module 3)
+```{r}
+GrowthMod1 <-  lmer(Height_Growth_Rate ~ Latitude + Precipitation_of_Wettest_Month + Mean_Annual_Temp + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod2 <- lmer(Height_Growth_Rate ~ Precipitation_of_Wettest_Month + Mean_Annual_Temp + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod3 <-lmer(Height_Growth_Rate ~ Latitude + Mean_Annual_Temp + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod4 <- lmer(Height_Growth_Rate ~ Latitude + Precipitation_of_Wettest_Month + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod5 <- lmer(Height_Growth_Rate ~ Latitude + Precipitation_of_Wettest_Month + Mean_Annual_Temp + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod6 <- lmer(Height_Growth_Rate ~ Mean_Annual_Temp + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod7 <- lmer(Height_Growth_Rate ~ Latitude + Precipitation_of_Wettest_Month + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod8 <- lmer(Height_Growth_Rate ~ Latitude + Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod9 <- lmer(Height_Growth_Rate ~ Latitude + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod10 <- lmer(Height_Growth_Rate ~  Precipitation_of_Wettest_Month + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod11 <- lmer(Height_Growth_Rate ~ Mean_Annual_Temp + (1 | Block), na.action = na.exclude, data = GarDat)
+GrowthMod12 <- lmer(Height_Growth_Rate ~ Temperature_Seasolity + (1 | Block), na.action = na.exclude, data = GarDat)
+
+lrtest(GrowthMod1, GrowthMod2, GrowthMod3, GrowthMod4, GrowthMod5, GrowthMod6, GrowthMod7, GrowthMod8, GrowthMod9, GrowthMod10, GrowthMod11, GrowthMod12)
+```
+# Likelihood ratio test demonstrates statistical significance for all models but GrowthMod1
+
+# AIC and BIC for model selection - GrowthMod7
+```{r}
+AIC(GrowthMod1, GrowthMod2, GrowthMod3, GrowthMod4, GrowthMod5, GrowthMod6, GrowthMod7, GrowthMod8, GrowthMod9, GrowthMod10, GrowthMod11, GrowthMod12)
+BIC(GrowthMod1, GrowthMod2, GrowthMod3, GrowthMod4, GrowthMod5, GrowthMod6, GrowthMod7, GrowthMod8, GrowthMod9, GrowthMod10, GrowthMod11, GrowthMod12)
+```
+# Model selection for height growth rate identifies GrowthMod7 to be best fit
+
+# Plotting Best Model for Height Growth Rate
+```{r}
+p <- sjPlot::plot_model(GrowthMod7, title = "Effect of Fixed Effects on Height Growth Rate")
+p+theme_sjplot()
+
+tab_model(GrowthMod7,
+          show.re.var = TRUE, dv.labels = "Effect of Fixed Effects on Height Growth Rate")
+```
+# Plot presents a negative relationship between latitude and Height Growth rate (Figure of best model as per AIC)
+
+
+# Plotting Model with all variables (model not significant or the best as per AIC)
+```{r}
+p2 <- sjPlot::plot_model(GrowthMod1, title = "Effect of Fixed Effects on Height Growth Rate")
+p2+theme_sjplot()
+
+tab_model(GrowthMod1,
+          show.re.var = TRUE, dv.labels = "Effect of Fixed Effects on Height Growth Rate")
+```
+# Plot of all variables demonstrating a negative relationship between fixed variables and Height Growth rate
+
+# ANOVA on most significant variables from LMM Height Growth Rate (Module 2)
+```{r}
+summary(GrowthMod7)
+anova(GrowthMod7)
+```
+
+# Evaluating how most significant LMM variables affect Germination using ttests (Module 1)
+```{r}
+t.test(GarDat$Latitude~GarDat$Germited)
+t.test(GarDat$Precipitation_of_Wettest_Month~GarDat$Germited)
+```
+# Two sample t-tests demonstrate statistical significance between both variables and Germination
+
+# Plotting germination data
+```{r}
+ggplot(GarDat, aes(x=as.factor(GarDat$Germited), y=GarDat$Latitude, color=as.factor(GarDat$Germited))) +
+  geom_boxplot(alpha=0.3) + labs(title="Germination with respect to latitude", x="Germination", y="Latitude")
+
+ggplot(GarDat, aes(x=as.factor(GarDat$Germited), y=GarDat$Precipitation_of_Wettest_Month, color=as.factor(GarDat$Germited))) +
+  geom_boxplot(alpha=0.3) + labs(title="Germination with respect to precipitation", x="Germination", y="Precipitation of Wettest Month")
+```
+
